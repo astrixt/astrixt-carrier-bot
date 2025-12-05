@@ -1,5 +1,7 @@
 import logging
 from datetime import datetime
+import os
+import json
 
 from telegram import (
     Update,
@@ -35,7 +37,19 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 
 def get_sheets_service():
-    creds = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
+    """
+    Створюємо клієнт Google Sheets, використовуючи JSON сервісного акаунта
+    з змінної оточення GOOGLE_CREDENTIALS (Railway → Variables).
+    """
+    creds_json = os.getenv("GOOGLE_CREDENTIALS")
+    if not creds_json:
+        raise RuntimeError(
+            "Не знайдено змінну оточення GOOGLE_CREDENTIALS. "
+            "Додай її в Railway у вкладці Variables."
+        )
+
+    info = json.loads(creds_json)
+    creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     service = build("sheets", "v4", credentials=creds)
     return service
 
