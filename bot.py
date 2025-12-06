@@ -99,22 +99,41 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Точка входу: /start або посилання з параметром:
     https://t.me/astrixTbot?start=<CARRIER_ID>
 
-    Тут читаємо CARRIER_ID з context.args і кладемо в user_data.
+    Тут читаємо CARRIER_ID та кладемо в user_data.
     """
-
     message = update.message or update.effective_message
     if not message:
         return ConversationHandler.END
 
-    # Читаем параметр после /start
-    args = context.args
-    carrier_id = args[0] if args else ""
+    # 1. Пытаемся взять из context.args (стандартный способ)
+    carrier_id = ""
+    if context.args:
+        carrier_id = context.args[0]
+
+    # 2. Дополнительно — разбираем текст /start 123 на случай, если args пустой
+    text = (message.text or "").strip()
+    if not carrier_id and text.startswith("/start"):
+        parts = text.split()
+        if len(parts) > 1:
+            carrier_id = parts[1]
+
     context.user_data["carrier_id"] = carrier_id
 
     logger.info(
         f"/start від user_id={message.from_user.id}, "
-        f"username={message.from_user.username}, CARRIER_ID={carrier_id}"
+        f"username={message.from_user.username}, CARRIER_ID='{carrier_id}'"
     )
+
+    # Показываем тебе, с ID он или без — для проверки
+    if carrier_id:
+        intro = f"Ви зайшли за посиланням з ID перевізника: {carrier_id}"
+    else:
+        intro = (
+            "⚠️ Ви зайшли БЕЗ параметра CARRIER_ID.\n"
+            "Щоб ID потрапив у таблицю, потрібно відкривати бота "
+            "за посиланням виду https://t.me/astrixTbot?start=<CARRIER_ID>, "
+            "а не просто писати /start."
+        )
 
     keyboard = [
         ["Тент", "Рефрижератор"],
@@ -123,8 +142,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
 
     await message.reply_text(
-        "Вітаємо в ASTRIXT 🚛\n\n"
-        "Оберіть, будь ласка, тип напівпричепа, з яким ви працюєте:",
+        intro
+        + "\n\nОберіть, будь ласка, тип напівпричепа, з яким ви працюєте:",
         reply_markup=ReplyKeyboardMarkup(
             keyboard,
             resize_keyboard=True,
